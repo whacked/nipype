@@ -1232,7 +1232,7 @@ class Node(WorkflowBase):
         if self._hierarchy:
             outputdir = os.path.join(outputdir, *self._hierarchy.split('.'))
         if self.parameterization:
-            if not str2bool(self.config['execution']['parameterize_dirs']):
+            if self.config is None or not str2bool(self.config['execution']['parameterize_dirs']):
                 param_dirs = [self._parameterization_dir(p) for p in
                               self.parameterization]
                 outputdir = os.path.join(outputdir, *param_dirs)
