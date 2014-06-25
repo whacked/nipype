@@ -24,6 +24,9 @@ $.post('/getGraphJSON', function(graph) {
     var DEFAULT_LINK_OPACITY = .4;
     var MOUSEOVER_TRANSITION_TIME = 100;
     var EXPAND_TRANSITION_TIME = 300;
+    var SMALL_ICON_SIZE = 21;
+    var IFRAME_HEIGHT = 400;
+    var IFRAME_WIDTH = 600;
     var TEXT_OFFSET = 23;
     var LEGEND_ITEM_HEIGHT; // set below after sizer()
     var LEGEND_PAD = 6;
@@ -588,12 +591,12 @@ $.post('/getGraphJSON', function(graph) {
                                     var url = 'http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename;
                                     var popupdiv = d3.select('.canvas').append('div')
                                         .attr('class', 'popup')
-                                        .attr('width', 450 + 'px')
-                                        .attr('height', 300 + 'px');
+                                        .attr('width', IFRAME_WIDTH + 'px')
+                                        .attr('height', IFRAME_HEIGHT + 'px');
                                     var sdFrame = d3.select('.canvas').append('iframe')
                                         .attr('id', 'vizFrame')
-                                        .attr('width', 450 + 'px')
-                                        .attr('height', 300 + 'px')
+                                        .attr('width', IFRAME_WIDTH + 'px')
+                                        .attr('height', IFRAME_HEIGHT + 'px')
                                         .attr('frameborder', '9px')
                                         .attr('src', url);
                                     var sdFrameClose = d3.select('.canvas').append('img')
@@ -616,8 +619,8 @@ $.post('/getGraphJSON', function(graph) {
                 var _menuClose = d3.select('.canvas').append('img')
                     .attr('class', 'textmenu menuclose')
                     .attr('nodeindex', i_node)
-                    .style("left", (loc[0]+25 + _menuSize - 10.5) + "px")
-                    .style("top", (loc[1]+20 - 10.5) + "px")
+                    .style("left", (loc[0]+25 + _menuSize - SMALL_ICON_SIZE/2) + "px")
+                    .style("top", (loc[1]+20 - SMALL_ICON_SIZE/2) + "px")
                     .attr('src', 'static/closebutton_small.png')
                     .on("mouseover", function(d) {
                         d3.select(this).style('cursor', 'pointer');

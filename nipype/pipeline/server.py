@@ -137,6 +137,7 @@ class WorkflowServer(object):
             if klass not in json_dict['klasses']:
                 json_dict['klasses'].append(klass)
 
+
         ### Find correspondences between non-expanded nodes and expanded nodes
         for i, stage in enumerate(all_stages):
             for j, unode in enumerate(sorted(stage)):
@@ -146,7 +147,8 @@ class WorkflowServer(object):
                 # TODO be more efficient
                 for (k, enode) in enumerate(self.expanded_nodes):
                     #if unode.name == enode.name:
-                    if enode._id.startswith(unode._id):
+                    #if enode._id.startswith(unode._id):
+                    if get_full_name(enode).startswith(get_full_name(unode)):
                         iterable_mapping[unode_counter].append(k)
                         assert k not in json_dict['reverse_mapping']
                         json_dict['reverse_mapping'][k] = unode_counter
@@ -159,6 +161,7 @@ class WorkflowServer(object):
                                                 index=unode_counter,
                                                 stage=i,
                                                 height=j,
+                                                fullname=get_full_name(enode),
                                                 _id=unode._id,
                                                 enodes=iterable_mapping[unode_counter],
                                                 ))
@@ -294,6 +297,14 @@ class WorkflowServer(object):
 def checkpasshash(realm, user, password):
     import hashlib
     return user == 'pipeline' and hashlib.sha1(password).hexdigest() == '992b5d666718483c9676361ebc685d122089e3eb'
+
+def get_full_name(node):
+    # fullname looks like "topworkflow.subworkflow.nodename" and _id looks
+    # like "nodename.a1.a2"; returns "topworkflow.subworkflow.nodename.a1.a2"
+    prefix = node.fullname.split('.')
+    suffix = node._id.split('.')
+    assert prefix[-1] == suffix[0]
+    return '.'.join(prefix[:-1] + suffix)
 
 def get_clean_class_name(node):
     klassname = repr(node.interface.__class__).split("'")[1]
