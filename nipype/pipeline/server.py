@@ -148,7 +148,10 @@ class WorkflowServer(object):
                 for (k, enode) in enumerate(self.expanded_nodes):
                     #if unode.name == enode.name:
                     #if enode._id.startswith(unode._id):
-                    if get_full_name(enode).startswith(get_full_name(unode)):
+                    #if get_full_name(enode).startswith(get_full_name(unode)):
+                    ename = get_full_name(enode)
+                    uname = get_full_name(unode)
+                    if uname == ename[:len(uname)]:
                         iterable_mapping[unode_counter].append(k)
                         assert k not in json_dict['reverse_mapping']
                         json_dict['reverse_mapping'][k] = unode_counter
@@ -161,7 +164,7 @@ class WorkflowServer(object):
                                                 index=unode_counter,
                                                 stage=i,
                                                 height=j,
-                                                fullname=get_full_name(enode),
+                                                fullname='.'.join(ename),
                                                 _id=unode._id,
                                                 enodes=iterable_mapping[unode_counter],
                                                 ))
@@ -300,11 +303,11 @@ def checkpasshash(realm, user, password):
 
 def get_full_name(node):
     # fullname looks like "topworkflow.subworkflow.nodename" and _id looks
-    # like "nodename.a1.a2"; returns "topworkflow.subworkflow.nodename.a1.a2"
+    # like "nodename.a1.a2"; returns [topworkflow,subworkflow,nodename,a1,a2]
     prefix = node.fullname.split('.')
     suffix = node._id.split('.')
     assert prefix[-1] == suffix[0]
-    return '.'.join(prefix[:-1] + suffix)
+    return prefix[:-1] + suffix
 
 def get_clean_class_name(node):
     klassname = repr(node.interface.__class__).split("'")[1]
