@@ -19,6 +19,7 @@ $.post('/getGraphJSON', function(graph) {
     var DIM_OPACITY = .2;
     var NEIGHBOR_OPACITY = .7;
     var SELECTED_OPACITY = .9;
+    var DEFAULT_OPACITY = SELECTED_OPACITY;
     var SELECTED_LINK_OPACITY = .99;
     var DEFAULT_LINK_OPACITY = .4;
     var MOUSEOVER_TRANSITION_TIME = 100;
@@ -195,7 +196,6 @@ $.post('/getGraphJSON', function(graph) {
             s.type = 'super';
             s.descr = s.name;
             s.truey = yscale(s.height);
-            console.log(s.truey);
             s.truex = truex + stageOffset;
             //s.truex = truex;
         };
@@ -321,7 +321,9 @@ $.post('/getGraphJSON', function(graph) {
         .enter().append("line")
           .attr("class", "link")
           .attr('marker-end', 'url(#arrowhead)')
-          .style("stroke-width", 3);
+          .style("stroke-width", 3)
+          .style("stroke-opacity", DEFAULT_LINK_OPACITY)
+          .style("opacity", DEFAULT_LINK_OPACITY);
 
     ///////////////////////////////////////////////////////////////////////////
     // Initialize nodes
@@ -337,8 +339,7 @@ $.post('/getGraphJSON', function(graph) {
     subnode_circle = subnode_g.append("svg:circle")
           .attr("r", function(d) { d.radius = NODESIZE; return d.radius; })
           .attr("id", function(d) { return d.id; })
-          .style("fill", function(d) { return color(d.klass); })
-          .style('stroke-width', 4);
+          .style("fill", function(d) { return color(d.klass); });
 
     // Initialize text: container <g>, "shadow"/embossing, and foreground
     subnode_text = subnode_g
@@ -364,12 +365,12 @@ $.post('/getGraphJSON', function(graph) {
         .attr("transform", function(d) {
             //return "translate(" + d.truex + "," + d.truey + ")";
             return "translate(" + d.truey + "," + d.truex + ")";
-        });
+        })
+        .style("opacity", DEFAULT_OPACITY);
 
     supernode_circle = supernode_g.append("circle")
         .attr("r", function(d) { d.radius = sizer(d.subnodes.length); return d.radius; })
-        .style("fill", function(d) { return color(d.klass); })
-        .style('stroke-width', 4);
+        .style("fill", function(d) { return color(d.klass); });
 
     supernode_plussign = supernode_g.append("text")
         .attr("text-anchor", "middle")
@@ -464,8 +465,7 @@ $.post('/getGraphJSON', function(graph) {
                 .filter(function(d_link) { return d_link.supersource === thisi || d_link.supertarget === thisi; })
                 .transition().duration(MOUSEOVER_TRANSITION_TIME)
                 .style("stroke-opacity", SELECTED_LINK_OPACITY)
-                .style("opacity", SELECTED_LINK_OPACITY)
-                .style("fill-opacity", SELECTED_LINK_OPACITY);
+                .style("opacity", SELECTED_LINK_OPACITY);
         })
         .on("mouseout", function(d_this) {
             d3.select(this).style('cursor', 'default');
@@ -480,9 +480,7 @@ $.post('/getGraphJSON', function(graph) {
                 .text(function(d_other) { return abbreviateText(d_other.descr); });
             d3.selectAll(".link")
                 .transition().duration(MOUSEOVER_TRANSITION_TIME)
-                .style("stroke-opacity", DEFAULT_LINK_OPACITY)
-                .style("opacity", DEFAULT_LINK_OPACITY)
-                .style("fill-opacity", DEFAULT_LINK_OPACITY);
+                .style("opacity", DEFAULT_LINK_OPACITY);
         });
 
     multiparent
@@ -540,18 +538,24 @@ $.post('/getGraphJSON', function(graph) {
                 loc = d3.transform(d3.select(circle.parentNode).attr("transform")).translate
                 // TODO dim all other nodes
                 $.post('/getOutputInfo', {"index": i_node}, function(result) {
-                // TODO make these all vars
                     var _menu = d3.select(".canvas").append('ul')
+                            .attr('nodeindex', i_node)
                             .attr('class', 'textmenu')
                             .style("left", (loc[0]+25) + "px")
                             .style("top", (loc[1]+20) + "px");
                     d_node.menu = _menu;
-                    brighten_amounts = {'string': 3, 'file': 2, 'close': 1};
                     var _menuItems = _menu.selectAll('li')
                             .data(result)
                           .enter().append('li')
-                            .html(function(d_item) { return '<a href="#">' + d_item.name + '</a>'; })
-                            .html(function(d_item) { return  d_item.name; })
+                            .html(function(d_item) {
+                                var type;
+                                if (d_item.type === 'string') {
+                                    type = 'fa-align-justify';
+                                } else if (d_item.type === 'file') {
+                                    type = 'fa-file-image-o';
+                                }
+                                return '<i class="fa ' + type + ' fa-fw"></i>&nbsp; ' + d_item.name;
+                            })
                             .style('border-bottom', '1px solid ' + color.toString())
                             .style('padding', '3px')
                             .style('background-color', function(d_item) {
@@ -577,23 +581,54 @@ $.post('/getGraphJSON', function(graph) {
                             .on("click", function(d_item) {
                                 if (d_item.type === 'string') {
                                     // TODO nice text box here
-                                    //console.log(d_item.value);
                                     window.alert(d_item.value);
                                 } else if (d_item.type === 'file') {
                                     // create a slicedrop iframe
                                     var filename = d_item.value;
                                     var url = 'http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename;
-                                    d3.select('.canvas').append('iframe')
+                                    var popupdiv = d3.select('.canvas').append('div')
+                                        .attr('class', 'popup')
+                                        .attr('width', 450 + 'px')
+                                        .attr('height', 300 + 'px');
+                                    var sdFrame = d3.select('.canvas').append('iframe')
                                         .attr('id', 'vizFrame')
                                         .attr('width', 450 + 'px')
                                         .attr('height', 300 + 'px')
                                         .attr('frameborder', '9px')
                                         .attr('src', url);
-    
-                                } else if (d_item.type === 'close') {
-                                    d3.select(this.parentNode).remove();
+                                    var sdFrameClose = d3.select('.canvas').append('img')
+                                        .attr('id', 'sliceDropClose')
+                                        .attr('src', 'static/closebutton.png')
+                                        .on("mouseover", function(d) {
+                                            d3.select(this).style('cursor', 'pointer');
+                                        })
+                                        .on("mouseout", function(d) {
+                                            d3.select(this).style('cursor', 'default');
+                                        })
+                                        .on("click", function(d) {
+                                            // TODO these will break if there's >1 iframe
+                                            sdFrame.remove();
+                                            sdFrameClose.remove();
+                                        });
                                 }
                             });
+                var _menuSize = _menu[0][0].offsetWidth;
+                var _menuClose = d3.select('.canvas').append('img')
+                    .attr('class', 'textmenu menuclose')
+                    .attr('nodeindex', i_node)
+                    .style("left", (loc[0]+25 + _menuSize - 10.5) + "px")
+                    .style("top", (loc[1]+20 - 10.5) + "px")
+                    .attr('src', 'static/closebutton_small.png')
+                    .on("mouseover", function(d) {
+                        d3.select(this).style('cursor', 'pointer');
+                    })
+                    .on("mouseout", function(d) {
+                        d3.select(this).style('cursor', 'default');
+                    })
+                    .on("click", function(d) {
+                        d3.select('.textmenu[nodeindex="'+i_node+'"]').remove();
+                        d3.select(this).remove();
+                    });
                 });
             }
         });

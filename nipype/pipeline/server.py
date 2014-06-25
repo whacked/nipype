@@ -35,6 +35,7 @@ def serve_content(workflow=None):
     workflow: a nipype.engine.Workflow object to illustrate graphically
     execgraph: result of calling the workflow's run() method
     """
+
     server = WorkflowServer(workflow)
     content_dir = op.join(workflow.base_dir, 'server_content')
     try:
@@ -86,11 +87,17 @@ class WorkflowServer(object):
             the workflow to show info/results for
         """
         self.workflow = workflow
-        graph = workflow._graph
+        # TODO display workflow in a hierarchy here: use nested workflows, etc
+        #graph = workflow._graph
+        graph = workflow._create_flat_graph()
+        # _create_flat_graph expands sub-workflows, but not iterables.
+        # generate_expanded_graph goes all the way down to iterable expansion
+
         # iterable-expanded graph
-        self.execgraph = generate_expanded_graph(deepcopy(workflow._create_flat_graph()))
+        self.execgraph = generate_expanded_graph(deepcopy(graph))
 
         self.expanded_nodes = nx.topological_sort(self.execgraph)
+        unexpanded_nodes_unstaged = nx.topological_sort(graph)
         self.unexpanded_nodes = []
         json_dict = {'unodes': [], 'enodes': [], 'links': [],
                 'reverse_mapping': {}, 'klasses': []}
@@ -103,7 +110,7 @@ class WorkflowServer(object):
         current_stage_nodes = []
         all_stages = []
         completed_nodes = set()
-        for (i, node) in enumerate(graph.nodes()):
+        for (i, node) in enumerate(unexpanded_nodes_unstaged):
             if graph.out_degree(node) == 0:
                 current_stage_nodes.append(node)
         while True:
@@ -125,7 +132,7 @@ class WorkflowServer(object):
 
         unode_counter = 0
         iterable_mapping = collections.defaultdict(lambda: [])
-        for node in self.expanded_nodes + graph.nodes():
+        for node in self.expanded_nodes + unexpanded_nodes_unstaged:
             klass = get_clean_class_name(node)
             if klass not in json_dict['klasses']:
                 json_dict['klasses'].append(klass)
@@ -165,8 +172,9 @@ class WorkflowServer(object):
             # this takes /tmp/blah/<workflow name>/... and returns
             # <workflow name>/...
             out_dir = enode.output_dir()
-            # out_dir = op.join(workflow.base_dir,
-            #                   enode.output_dir().split(os.path.sep, 3)[-1])
+            if not out_dir.startswith(workflow.base_dir):
+                out_dir = op.join(workflow.base_dir,
+                                  enode.output_dir().split(os.path.sep, 3)[-1])
             report_file = op.join(out_dir, '_report', 'report.rst')
             result_file = op.join(out_dir, "result_%s.pklz" % enode.name)
             klass = get_clean_class_name(enode)
@@ -213,6 +221,7 @@ class WorkflowServer(object):
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script src="static/pipeviz.js"></script>
     <link type="text/css" rel="stylesheet" href="static/style.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
     </style>
   </head>
   <body>
@@ -259,9 +268,7 @@ class WorkflowServer(object):
         # TODO find a better way to get the outputs here
         for (outname, output) in result.outputs.get().items():
             if type(output) is str:
-                #censored_output = output.replace('/data/scratch/rameshvs', '/tmp/data')
                 out.append({'name': outname, 'value': output, 'type': 'file'})
-        out.append({'name': 'close this menu', 'value': '', 'type': 'close'})
         cherrypy.response.headers['Content-Type'] = 'application/json'
         print(out)
         return json.dumps(out)

@@ -28,13 +28,24 @@ iframe {
     position: absolute;
     top: 0; bottom: 0;
     left: 0; right: 0;
-    margin-bottom: 50px;
+}
+.popup {
+    margin: auto;
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0; right: 0;
+}
+#sliceDropClose {
+    margin: auto;
+    position: absolute;
+    top: 0px; bottom: 300px;
+    left: 450px; right: 0;
 }
 
 circle {
   fill: #ccc;
   stroke: #333;
-  stroke-width: 1.3px;
+  stroke-width: 2.5px;
   fill-opacity: .99;
 }
 
@@ -54,14 +65,16 @@ text.shadow {
   stroke-width: 3.5px;
 }
 
-ul.textmenu {
+.textmenu {
     position: absolute;
+    padding: 0px;
+    margin: 0px;
+}
+ul.textmenu {
     background-color: #fff;
     border: 1px #ccc solid;
     border-radius: 3px;
     box-shadow: #333 4px 4px 8px;
-    padding: 0px;
-    margin: 0px;
     list-style-type: none;
 }
 
