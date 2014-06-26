@@ -5,7 +5,7 @@
 // TODO why don't the nodes line up down the center?
 server = document.URL.split('/', 3).join('/');
 
-// d3.json('pipe.json', function(error, graph) {
+// d3.json('pipeline.json', function(error, graph) {
 $.post('/getGraphJSON', function(graph) {
 
 
@@ -36,8 +36,8 @@ $.post('/getGraphJSON', function(graph) {
 
     // var w = 900*.75,
     //     h = 1260*.75;
-    var w = 600,
-        h = 720;
+    var w = 1200,
+        h = 1720;
 
     // Declarations
     var color, nstages, xscale, xgap;
@@ -82,7 +82,7 @@ $.post('/getGraphJSON', function(graph) {
         return out;
     }
     $.ajaxSetup({
-        timeout: 1000 * 60 // global AJAX timeout of 1 min
+        timeout: 1000 * 60 // global AJAX timeout of 1 minute
     });
 
     function pollNodeStatuses() {
@@ -158,9 +158,13 @@ $.post('/getGraphJSON', function(graph) {
     ///////////
     // Setup //
     ///////////
-    graph.subnodes.forEach(function(d) {
+    graph.subnodes.forEach(function(d, i) {
         d.children = [];
-        d.descr = d.parameterization.join(", ");
+        if (d.parameterization === null) {
+            d.descr = graph.supernodes[graph.reverse_mapping[i]].name;
+        } else {
+            d.descr = d.parameterization.join(", ");
+        }
         d.type = 'sub';
     });
     color = d3.scale.category10();
@@ -591,17 +595,26 @@ $.post('/getGraphJSON', function(graph) {
                                     var url = 'http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename;
                                     var popupdiv = d3.select('.canvas').append('div')
                                         .attr('class', 'popup')
-                                        .attr('width', IFRAME_WIDTH + 'px')
-                                        .attr('height', IFRAME_HEIGHT + 'px');
-                                    var sdFrame = d3.select('.canvas').append('iframe')
+                                        .style('width', IFRAME_WIDTH + 'px')
+                                        .style('height', IFRAME_HEIGHT + 'px');
+                                    $('.popup').draggable().resizable();
+
+                                    var sdFrame = popupdiv.append('iframe')
                                         .attr('id', 'vizFrame')
-                                        .attr('width', IFRAME_WIDTH + 'px')
-                                        .attr('height', IFRAME_HEIGHT + 'px')
-                                        .attr('frameborder', '9px')
+                                        .style('position', 'relative')
+                                        .attr('width', '98%')
+                                        .style('height', '96%')
+                                        .style('margin', '3% 1% 1% 1%')
                                         .attr('src', url);
-                                    var sdFrameClose = d3.select('.canvas').append('img')
+                                        // .style('margin-bottom', -200)
+                                        // .style('margin-left', -200)
+                                    var sdFrameClose = popupdiv.append('img')
                                         .attr('id', 'sliceDropClose')
                                         .attr('src', 'static/closebutton.png')
+                                        .style('margin', 'auto')
+                                        .style('position', 'absolute')
+                                        .style('left', IFRAME_WIDTH +'px')
+                                        .style('top', IFRAME_HEIGHT + 'px')
                                         .on("mouseover", function(d) {
                                             d3.select(this).style('cursor', 'pointer');
                                         })
@@ -609,16 +622,13 @@ $.post('/getGraphJSON', function(graph) {
                                             d3.select(this).style('cursor', 'default');
                                         })
                                         .on("click", function(d) {
-                                            // TODO these will break if there's >1 iframe
-                                            sdFrame.remove();
-                                            sdFrameClose.remove();
+                                            d3.select(this.parentNode).remove();
                                         });
                                 }
                             });
                 var _menuSize = _menu[0][0].offsetWidth;
                 var _menuClose = d3.select('.canvas').append('img')
                     .attr('class', 'textmenu menuclose')
-                    .attr('nodeindex', i_node)
                     .style("left", (loc[0]+25 + _menuSize - SMALL_ICON_SIZE/2) + "px")
                     .style("top", (loc[1]+20 - SMALL_ICON_SIZE/2) + "px")
                     .attr('src', 'static/closebutton_small.png')
@@ -688,10 +698,3 @@ $.post('/getGraphJSON', function(graph) {
     moveSubnodesToSupernodes();
     //pollNodeStatuses(); // keep polling forever
 });
-
-window.onkeyup = function(e) {
-    // use 'popup' iframes for click-to-view: close on escape
-    if (e.keyCode === 27) {
-        $('iframe').remove();
-    }
-};
