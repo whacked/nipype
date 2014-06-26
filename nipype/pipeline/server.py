@@ -164,7 +164,7 @@ class WorkflowServer(object):
                                                 index=unode_counter,
                                                 stage=i,
                                                 height=j,
-                                                fullname='.'.join(ename),
+                                                fullname='.'.join(uname),
                                                 _id=unode._id,
                                                 enodes=iterable_mapping[unode_counter],
                                                 ))

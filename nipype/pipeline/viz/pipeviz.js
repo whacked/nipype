@@ -438,12 +438,18 @@ $.post('/getGraphJSON', function(graph) {
 
     singleton
         .attr("visibility", "hidden")
-        .each(function(d, i) {
-            d3.selectAll(d.subnode_elements)
+        .each(function(d_super, i) {
+            d3.selectAll(d_super.subnode_elements)
                 .style("opacity", 1)
                 .style("pointer-events", "all")
-                .each(function(d_sub) { unhide(d_sub); });
+                .each(function(d_sub) {
+                    unhide(d_sub);
+                    d_sub.descr = d_super.descr + " (" + d_sub.descr + ")";
+                    console.log(d_sub);
+                });
         });
+
+    subnode_text_fg.text(function(d) { return d.descr; });
 
 
     ///////////////////////////////////////////////////////////////////////////
@@ -599,12 +605,13 @@ $.post('/getGraphJSON', function(graph) {
                                         .style('height', IFRAME_HEIGHT + 'px');
                                     $('.popup').draggable().resizable();
 
+
                                     var sdFrame = popupdiv.append('iframe')
                                         .attr('id', 'vizFrame')
-                                        .style('position', 'relative')
-                                        .attr('width', '98%')
-                                        .style('height', '96%')
-                                        .style('margin', '3% 1% 1% 1%')
+                                        .attr('width', '96%')
+                                        .style('height', '95%')
+                                        .style('margin', 'auto')
+                                        .style('margin-top', '3%')
                                         .attr('src', url);
                                         // .style('margin-bottom', -200)
                                         // .style('margin-left', -200)

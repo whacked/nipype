@@ -25,6 +25,9 @@ svg {
 }
 iframe {
     margin: auto;
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 0; right: 0;
 }
 .popup {
     background-color: #3a1;
