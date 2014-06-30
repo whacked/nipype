@@ -1,6 +1,5 @@
 
 // TODO Add a title bar for iframe (which node and which output of that node, along with close button)
-// TODO clicking on node closes the menu (harder)
 // TODO mousing through menu shouldn't dim the corresponding node
 // TODO why don't the nodes line up down the center?
 server = document.URL.split('/', 3).join('/');
@@ -46,7 +45,7 @@ $.post('/getGraphJSON', function(graph) {
     var svg, subnode_g, subnode_circle, subnode_text, subnode_text_shadow,
         subnode_text_fg, supernode_g, supernode_circle, supernode_plussign,
         singleton, multiparent;
-    var legend;
+    //var legend;
 
     ///////////////////////
     // Utility functions //
@@ -279,47 +278,6 @@ $.post('/getGraphJSON', function(graph) {
         }
     }
 
-    legend = svg.append("g")
-        .attr("class", "legend")
-        .attr("transform", "translate(" + h*.65 + "," + w*.8 + ")")
-        .attr("preserveAspectRatio", "xMaxYMin meet");
-
-    legend_items = legend.selectAll(".legenditem")
-            .data(graph.klasses)
-          .enter().append("g")
-            .attr("class", "legenditem")
-            .attr("transform", function(d, i) {
-                return "translate(0," + (i+1) * LEGEND_ITEM_HEIGHT + ")";
-            });
-
-    legend_circles = legend_items.append("circle")
-        .attr("r", sizer(.5))
-        .style("fill", function(d, i) { return color(i); });
-    legend_labels = legend_items.append("text")
-        .text(function(d) { return d; })
-        .style("font-size", "0.85em")
-        .attr("transform", "translate(" + TEXT_OFFSET + ", 0)");
-
-    legend_label = legend.append("text")
-        .text("Legend")
-        .attr("text-anchor", "middle")
-        .attr("transform", "translate(0,0)");
-
-    bbox = legend[0][0].getBBox();
-    legend_label.attr("transform", "translate(" + (bbox.x + bbox.width/2) + ",0)");
-
-    legend_outline = legend.append("rect")
-        .attr("x", bbox.x - LEGEND_PAD)
-        .attr("y", bbox.y - LEGEND_PAD)
-        .attr("width", bbox.width + 2*LEGEND_PAD)
-        .attr("height", bbox.height + 2*LEGEND_PAD)
-        .attr("rx", "5px")
-        .attr("ry", "5px")
-        .style("-webkit-svg-shadow", "0 0 7px")
-        .style("stroke", "#7f7f7f")
-        .style("stroke-width", "2px")
-        .style("fill", "none");
-
     marker = arrowhead.append('polygon')
         .attr('points', '-2,0 -5,5 5,0 -5,-5');
 
@@ -445,7 +403,6 @@ $.post('/getGraphJSON', function(graph) {
                 .each(function(d_sub) {
                     unhide(d_sub);
                     d_sub.descr = d_super.descr + " (" + d_sub.descr + ")";
-                    console.log(d_sub);
                 });
         });
 
@@ -557,6 +514,7 @@ $.post('/getGraphJSON', function(graph) {
                             .style("left", (loc[0]+25) + "px")
                             .style("top", (loc[1]+20) + "px");
                     d_node.menu = _menu;
+                    // TODO try using jquery ui menu
                     var _menuItems = _menu.selectAll('li')
                             .data(result)
                           .enter().append('li')
@@ -597,6 +555,7 @@ $.post('/getGraphJSON', function(graph) {
                                     window.alert(d_item.value);
                                 } else if (d_item.type === 'file') {
                                     // create a slicedrop iframe
+                                    // TODO use jquery ui dialog here instead
                                     var filename = d_item.value;
                                     var url = 'http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename;
                                     var popupdiv = d3.select('.canvas').append('div')
@@ -702,6 +661,91 @@ $.post('/getGraphJSON', function(graph) {
             return "translate(" + d.y + "," + d.truex + ")";
         });
 
+
+    var legendExpanded = true;
+    legend_svg = d3.select(".legend-container").append("svg")
+            .attr("class", "legendsvg");
+
+    legend = legend_svg.append("g")
+        .attr("class", "legend")
+        .style("margin-left", "0")
+        .style("margin-right", "auto");
+        //.attr("transform", "translate(" + h*.65 + "," + w*.8 + ")");
+        //.attr("preserveAspectRatio", "xMaxYMax meet");
+
+    legend_items = legend.selectAll(".legenditem")
+            .data(graph.klasses)
+          .enter().append("g")
+            .attr("class", "legenditem")
+            .attr("transform", function(d, i) {
+                return "translate(0," + (i+1) * LEGEND_ITEM_HEIGHT + ")";
+            });
+
+    legend_circles = legend_items.append("circle")
+        .attr("r", sizer(.5))
+        .style("fill", function(d, i) { return color(i); });
+    legend_labels = legend_items.append("text")
+        .text(function(d) { return d; })
+        .style("font-size", "0.85em")
+        .attr("transform", "translate(" + TEXT_OFFSET + ", 0)");
+
+    // TODO use better system than unicode arrows: can't use icons in svg text,
+    // but maybe fix/control width of arrow better?
+    legend_label = legend.append("text")
+        .text("▼ Legend")
+        .attr("class", "legend-title")
+        .attr("text-anchor", "middle")
+        .on("mouseover", function(d) {
+            d3.select(this).style('cursor', 'pointer');
+        })
+        .on("mouseout", function(d_this) {
+            d3.select(this).style('cursor', 'default');
+        })
+        .on("click", function(d) {
+            if (legendExpanded) {
+                var height = legendTitleBox.height + 2*LEGEND_PAD;
+                legend_svg.transition().duration(MOUSEOVER_TRANSITION_TIME).attr("height", height + "px");
+                legend_outline.transition().duration(MOUSEOVER_TRANSITION_TIME).attr("height", height + "px");
+                d3.select(this).text("▶ Legend");
+                legendExpanded = false;
+            } else {
+                legend_svg.transition().duration(MOUSEOVER_TRANSITION_TIME).attr("height", legendHeight);
+                legend_outline.transition().duration(MOUSEOVER_TRANSITION_TIME).attr("height", legendHeight);
+                d3.select(this).text("▼ Legend");
+                legendExpanded = true;
+            }
+        });
+
+    var legendTitleBox = legend_label[0][0].getBBox();
+    var fullLegendBox = legend[0][0].getBBox();
+
+    var legendWidth, legendHeight;
+    legendWidth = fullLegendBox.width + 2*LEGEND_PAD;
+    legendHeight = fullLegendBox.height + 2*LEGEND_PAD;
+
+    legend_outline = legend.append("rect")
+        .attr("x", fullLegendBox.x - LEGEND_PAD)
+        .attr("y", fullLegendBox.y - LEGEND_PAD)
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .attr("rx", "10px")
+        .attr("ry", "10px")
+        .style("-webkit-svg-shadow", "0 0 7px")
+        .style("stroke", "#7f7f7f")
+        .style("stroke-width", "2px")
+        .style('fill-opacity', 1)
+        .style("fill", "#f2f2f2");
+
+    var legendMove = $('.legenditem').detach();
+    $('.legend').append(legendMove);
+    legendMove = $('.legend-title');
+    $('.legend').append(legendMove);
+    legend_svg.attr('width', legendWidth).attr('height', legendHeight);
+    legend.attr('width', legendWidth).attr('height', legendHeight);
+    d3.select('.legend-container')
+        .style('width', legendWidth)
+        .style('height', legendHeight);
+    legend.attr('transform', 'translate(' + (LEGEND_PAD-fullLegendBox.x) + ',' + (LEGEND_PAD-fullLegendBox.y) + ')');
     moveSubnodesToSupernodes();
     //pollNodeStatuses(); // keep polling forever
 });

@@ -226,6 +226,7 @@ class WorkflowServer(object):
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script src="http://d3js.org/d3.v3.min.js"></script>
     <script src="static/pipeviz.js"></script>
+
     <script src="static/jquery-ui-1.10.4.custom.min.js"></script>
     <link type="text/css" rel="stylesheet" href="static/style.css">
     <link type="text/css" rel="stylesheet" href="static/jquery-ui-1.10.4.custom.min.css">
@@ -234,6 +235,7 @@ class WorkflowServer(object):
   </head>
   <body>
   <div class="canvas"></div>
+  <div class="legend-container"></div>
   </body>
 </html>
         """

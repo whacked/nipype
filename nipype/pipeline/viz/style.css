@@ -38,6 +38,20 @@ iframe {
     left: 0;
 }
 
+.legend-container {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+}
+/* .legend-container { */
+/*     position: fixed; */
+/*     bottom: 0px; right: 0px; */
+/* } */
+/* .legendsvg { */
+/*     margin-left: auto; */
+/*     float: right; */
+/*     top: 0; right: 0; */
+/* } */
 circle {
   fill: #ccc;
   stroke: #333;
