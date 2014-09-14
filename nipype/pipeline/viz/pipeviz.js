@@ -1,19 +1,23 @@
 
-// TODO Add a title bar for iframe (which node and which output of that node, along with close button)
+// TODO Add a title bar for iframe (which node and which output of that node)
 // TODO mousing through menu shouldn't dim the corresponding node
-// TODO why don't the nodes line up down the center?
 server = document.URL.split('/', 3).join('/');
 
-// d3.json('pipeline.json', function(error, graph) {
 $.post('/getGraphJSON', function(graph) {
 
 
-    // TODO remove this global var
     _graph = graph;
+    invert_x_y = true;
 
-    var IN_PROGRESS_COLOR = '#1f77b4';
-    var FAILURE_COLOR = '#d62728';
-    var COMPLETED_COLOR = '#2ca02c';
+    // var IN_PROGRESS_COLOR = '#111111';
+    // var FAILURE_COLOR = '#ff0000';
+    // var COMPLETED_COLOR = '#00ff00';
+    // var IN_PROGRESS_COLOR = '#1f77b4';
+    // var FAILURE_COLOR = '#d62728';
+    // var COMPLETED_COLOR = '#2ca02c';
+    var IN_PROGRESS_COLOR = '#aaaaaa';
+    var FAILURE_COLOR = '#ff9896';
+    var COMPLETED_COLOR = '#98df8a';
     // constants
     var DIM_OPACITY = .2;
     var NEIGHBOR_OPACITY = .7;
@@ -33,10 +37,15 @@ $.post('/getGraphJSON', function(graph) {
     var NODESIZE = 12;
     var BORDER = .03;
 
-    // var w = 900*.75,
-    //     h = 1260*.75;
-    var w = 1200,
-        h = 1720;
+    var h = 900*.75 * 1.09,
+        w = 1260*.75;
+    // var w = 1200,
+    //     h = 1720;
+    if (invert_x_y) {
+        var tmp = h;
+        h = w;
+        w = tmp;
+    }
 
     // Declarations
     var color, nstages, xscale, xgap;
@@ -84,10 +93,10 @@ $.post('/getGraphJSON', function(graph) {
         timeout: 1000 * 60 // global AJAX timeout of 1 minute
     });
 
-    function pollNodeStatuses() {
-        $.get('/nodeStatuses', function(result) {
+    function pollNodeStatuses(timeout) {
+        $.get('/nodeStatuses', {"timeout": timeout}, function(result) {
             // assumes server will sleep before responding for a "long poll"
-            subnode_circle
+            subnode_text_shadow
                 .style("stroke", function(d, i) {
                     d.completionStatus = result[i];
                     if (result[i] === 0) {
@@ -98,37 +107,37 @@ $.post('/getGraphJSON', function(graph) {
                         return FAILURE_COLOR;
                     }
                 });
-            supernode_g
+            supernode_text_shadow
                 .each(function(d_super) {
                     var foundProgress = false;
                     var foundCompleted = false;
                     var foundFailure = false;
                     d3.selectAll(d_super.subnode_elements)
                         .each(function(d_sub) {
-                            if (d_sub.completion_status === 0) {
+                            if (d_sub.completionStatus === 0) {
                                 foundProgress = true;
-                            } else if (d_sub.completion_status === 1) {
+                            } else if (d_sub.completionStatus === 1) {
                                 foundCompleted = true;
-                            } else if (d_sub.completion_status === -1) {
+                            } else if (d_sub.completionStatus === -1) {
                                 foundFailure = true;
                             }
                         });
                     d_super.strokeStyle = gradientMap[[foundProgress, foundCompleted, foundFailure]];
                 })
                 .style("stroke", function(d_super) { return d_super.strokeStyle; });
-            pollNodeStatuses(); // keep polling forever
+            pollNodeStatuses(10); // keep polling forever
         });
 
     }
-    var gradientMap = {};
+    gradientMap = {};
     //    [progress, completed, failure]
-    gradientMap[[true, true, true]] = '#(gradientProgressCompletedFailure)';
-    gradientMap[[true, true, false]] = '#(gradientProgressCompleted)';
-    gradientMap[[true, false, true]] = '#(gradientProgressFailure)';
-    gradientMap[[false, true, true]] = '#(gradientCompletedFailure)';
-    gradientMap[[false, false, true]] = IN_PROGRESS_COLOR;
+    gradientMap[[true, true, true]] = 'url(#gradientProgressCompletedFailure)';
+    gradientMap[[true, true, false]] = 'url(#gradientProgressCompleted)';
+    gradientMap[[true, false, true]] = 'url(#gradientProgressFailure)';
+    gradientMap[[false, true, true]] = 'url(#gradientCompletedFailure)';
+    gradientMap[[true, false, false]] = IN_PROGRESS_COLOR;
     gradientMap[[false, true, false]] = COMPLETED_COLOR;
-    gradientMap[[true, false, false]] = FAILURE_COLOR;
+    gradientMap[[false, false, true]] = FAILURE_COLOR;
 
     /**
      * Compare two nodes to see the relationship between them.
@@ -177,22 +186,25 @@ $.post('/getGraphJSON', function(graph) {
 
     for (var istage=0; istage<=nstages; istage++) {
         var supernodesInStage = graph.supernodes.filter(function(d) { return d.stage === istage; });
+        var stageSize = supernodesInStage.length;
         var truex = xscale(istage);
 
-        // TODO make a fixed grid with offsets per stage
-        // i.e. stage 1 is 1, 4, 7, 10, 13
-        //      stage 2 is 2, 5, 8, 11, 14
-        //      stage 3 is 3, 6, 9, ...
+        // TODO investigate other layouts
         //var border = BORDER + 6*BORDER*(istage % 2);
-        var yscale = d3.scale.linear()
-            .domain([0, supernodesInStage.length-1])
-            //.range([0, (1-border)*h]);
-            .range([BORDER*6*h, (1-BORDER*6)*h]);
+        var yscale;
+        if (stageSize === 1) {
+            yscale = function(x) { return h/2; };
+        } else {
+            yscale = d3.scale.linear()
+                .domain([0, stageSize-1])
+                //.range([0, (1-border)*h]);
+                .range([BORDER*12*h, (1-BORDER*12)*h]);
+        }
 
-        var stageSize = supernodesInStage.length;
         for (var jjj=0; jjj<stageSize; jjj++) {
             var stageOffset;
-            if (stageSize === 1) {
+            //if (stageSize === 1) {
+            if (true) {
                 stageOffset = 0;
             } else {
                 stageOffset = (((jjj/(stageSize-1))-.5) * (xgap*.75));
@@ -201,8 +213,8 @@ $.post('/getGraphJSON', function(graph) {
         //supernodesInStage.forEach(function(s) {
             s.type = 'super';
             s.descr = s.name;
-            s.truey = yscale(s.height);
-            s.truex = truex + stageOffset;
+            s.truey = s.y = yscale(s.height);
+            s.truex = s.x = truex + stageOffset;
             //s.truex = truex;
         };
         //});
@@ -221,8 +233,8 @@ $.post('/getGraphJSON', function(graph) {
     }
 
     svg = d3.select(".canvas").append("svg")
-            .attr("height", w*1.2)
-            .attr("width", h);
+            .attr("height", h*1.2)
+            .attr("width", w);
     MARKER_SIZE = 5;
 
     defs = svg.append('defs');
@@ -268,9 +280,9 @@ $.post('/getGraphJSON', function(graph) {
                     if (curBool) {
                         gradientName += curName;
                         gradient.append('stop')
-                            .attr('offset', gradientStopCtr * (100/(gradientCount+1)) + '%')
+                            .attr('offset', gradientStopCtr * (100/(gradientCount-1)) + '%')
                             .attr('stop-color', curColor);
-                        gradientCount += 1;
+                        gradientStopCtr += 1;
                     }
                 }
                 gradient.attr('id', gradientName);
@@ -312,6 +324,7 @@ $.post('/getGraphJSON', function(graph) {
         .attr("class", "text-container")
         .attr("transform", "translate(" + TEXT_OFFSET + ",0)");
 
+
     subnode_text_shadow = subnode_text.append("svg:text")
         .attr("class", function(d) { return d.id + "text" + " shadow labeltext"; })
         .text(function(d) { return d.descr; });
@@ -328,8 +341,11 @@ $.post('/getGraphJSON', function(graph) {
         .attr("class", "node supernode")
         .attr("visibility", "visible")
         .attr("transform", function(d) {
-            //return "translate(" + d.truex + "," + d.truey + ")";
-            return "translate(" + d.truey + "," + d.truex + ")";
+            if (invert_x_y) {
+                return "translate(" + d.truey + "," + d.truex + ")";
+            } else {
+                return "translate(" + d.truex + "," + d.truey + ")";
+            }
         })
         .style("opacity", DEFAULT_OPACITY);
 
@@ -345,7 +361,13 @@ $.post('/getGraphJSON', function(graph) {
     supernode_text = supernode_g
         .append("svg:g")
         .attr("class", "text-container")
-        .attr("transform", "translate(-" + TEXT_OFFSET + ",0)");
+        .attr("transform", function(d, i) {
+            var vert_offset = NODESIZE * 0;
+            if (d.stage % 2 === 1) {
+                vert_offset = -vert_offset;
+            }
+            return "translate(-" + TEXT_OFFSET + "," + vert_offset + ")";
+        });
 
     supernode_text_shadow = supernode_text.append("svg:text")
         .attr("class", function(d) { return d.id + "text" + " shadow labeltext"; })
@@ -376,8 +398,11 @@ $.post('/getGraphJSON', function(graph) {
         supernode_g.each(function(d_super, i) {
             d3.selectAll(d_super.subnode_elements)
                 .attr("transform", function(d_sub) {
-                    //return "translate(" + d_super.truex + "," + d_super.y + ")";
-                    return "translate(" + d_super.y + "," + d_super.truex + ")";
+                    if (invert_x_y) {
+                        return "translate(" + d_super.y + "," + d_super.truex + ")";
+                    } else {
+                        return "translate(" + d_super.truex + "," + d_super.y + ")";
+                    }
                 });
         });
     };
@@ -415,6 +440,7 @@ $.post('/getGraphJSON', function(graph) {
     d3.selectAll(".node")
         .on("mouseover", function(d_this) {
             d3.select(this).style('cursor', 'pointer');
+            d3.select(this).style('stroke-width', '');
             var thisi = d_this.supernode || d_this.index;
             if (d_this.hidden) {
                 return;
@@ -428,6 +454,10 @@ $.post('/getGraphJSON', function(graph) {
                         return compare(d_this, d_other,
                             SELECTED_OPACITY, NEIGHBOR_OPACITY, DIM_OPACITY);
                     }
+                });
+            d3.selectAll("circle")
+                .style("stroke-width", function(d_other) {
+                    return compare(d_this, d_other, '4.5px', '2.5px', '2.5px');
                 });
             d3.selectAll(".labeltext")
                 .text(function(d_other) { return compare(d_this, d_other, d_other.descr, d_other.descr, abbreviateText(d_other.descr)); });
@@ -446,6 +476,10 @@ $.post('/getGraphJSON', function(graph) {
                 .filter(function(d) { return !d._hidden; })
                 .transition().duration(MOUSEOVER_TRANSITION_TIME)
                 .style("opacity", SELECTED_OPACITY);
+            d3.selectAll("circle")
+                .style("stroke-width", function(d_other) {
+                    return compare(d_this, d_other, '2.5px', '2.5px', '2.5px');
+                });
             d3.selectAll(".labeltext")
                 .text(function(d_other) { return abbreviateText(d_other.descr); });
             d3.selectAll(".link")
@@ -455,7 +489,7 @@ $.post('/getGraphJSON', function(graph) {
 
     multiparent
         .on("click", function(d_super, i_super) {
-            // TODO clean this up: no copy-paste
+            // TODO clean this up
             if (d_super._collapsed) {
                 d_super._collapsed = false;
                 d3.select(this).select('text')
@@ -471,8 +505,11 @@ $.post('/getGraphJSON', function(graph) {
                             // var dy = d_super.y + (i_sub - offset) * 30;
                             var dy = d_super.y + xgap/2;// + (i_sub - offset)*30;
                             var dx = d_super.x + (i_sub - offset) * 30;
-                            //return "translate(" + dx + "," + dy + ")";
-                            return "translate(" + dy + "," + dx + ")";
+                            if (invert_x_y) {
+                                return "translate(" + dy + "," + dx + ")";
+                            } else {
+                                return "translate(" + dx + "," + dy + ")";
+                            }
                         });
             } else {
                 d_super._collapsed = true;
@@ -486,26 +523,30 @@ $.post('/getGraphJSON', function(graph) {
                         .attr("transform", function(d_sub, i_sub) {
                             var dx = d_super.truex;
                             var dy = d_super.y;
-                            return "translate(" + dy + "," + dx + ")";
+                            if (invert_x_y) {
+                                return "translate(" + dy + "," + dx + ")";
+                            } else {
+                                return "translate(" + dx + "," + dy + ")";
+                            }
+
                         });
             }
         });
 
     graph.supernodes.forEach(function(d) {
         d.x = d.truex;
-        d.y = 0;
+        d.y = d.truey;
     });
 
     subnode_circle
         .on("click", function(d_node, i_node) {
-            // TODO make these all vars
             if (d_node.menu && !(d_node.menu === undefined)) {
                 d_node.menu.remove();
                 d_node.menu = false;
             } else {
-                circle = this;
-                color = d3.rgb(d3.select(circle).style('fill'));
-                loc = d3.transform(d3.select(circle.parentNode).attr("transform")).translate
+                var circle = this;
+                var color = d3.rgb(d3.select(circle).style('fill'));
+                var loc = d3.transform(d3.select(circle.parentNode).attr("transform")).translate
                 // TODO dim all other nodes
                 $.post('/getOutputInfo', {"index": i_node}, function(result) {
                     var _menu = d3.select(".canvas").append('ul')
@@ -551,36 +592,44 @@ $.post('/getGraphJSON', function(graph) {
                             })
                             .on("click", function(d_item) {
                                 if (d_item.type === 'string') {
-                                    // TODO nice text box here
+                                    // TODO make a text box here instead of alert
                                     window.alert(d_item.value);
                                 } else if (d_item.type === 'file') {
                                     // create a slicedrop iframe
-                                    // TODO use jquery ui dialog here instead
+                                    // TODO use jquery ui Dialog here instead
                                     var filename = d_item.value;
                                     var url = 'http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename;
                                     var popupdiv = d3.select('.canvas').append('div')
                                         .attr('class', 'popup')
                                         .style('width', IFRAME_WIDTH + 'px')
-                                        .style('height', IFRAME_HEIGHT + 'px');
+                                        .style('height', IFRAME_HEIGHT + 'px')
+                                        .style('opacity', .96)
+                                        .on("mouseover", function(d) {
+                                            d3.select(this).style('cursor', 'move');
+                                        })
+                                        .on("mouseout", function(d) {
+                                            d3.select(this).style('cursor', 'default');
+                                        });
                                     $('.popup').draggable().resizable();
 
 
                                     var sdFrame = popupdiv.append('iframe')
                                         .attr('id', 'vizFrame')
-                                        .attr('width', '96%')
-                                        .style('height', '95%')
+                                        .attr('width', '86%')
+                                        .style('height', '85%')
                                         .style('margin', 'auto')
                                         .style('margin-top', '3%')
+                                        .style('opacity', 1)
                                         .attr('src', url);
-                                        // .style('margin-bottom', -200)
-                                        // .style('margin-left', -200)
                                     var sdFrameClose = popupdiv.append('img')
                                         .attr('id', 'sliceDropClose')
                                         .attr('src', 'static/closebutton.png')
                                         .style('margin', 'auto')
                                         .style('position', 'absolute')
-                                        .style('left', IFRAME_WIDTH +'px')
-                                        .style('top', IFRAME_HEIGHT + 'px')
+                                        .style('left', '-21px') // half its size
+                                        .style('top', '-21px')
+                                        // .style('left', IFRAME_WIDTH +'px')
+                                        // .style('top', IFRAME_HEIGHT + 'px')
                                         .on("mouseover", function(d) {
                                             d3.select(this).style('cursor', 'pointer');
                                         })
@@ -624,7 +673,7 @@ $.post('/getGraphJSON', function(graph) {
 
     force.on("tick", function(e) {
         var kx = 8.2 * e.alpha;
-        var ky = 0.2 * e.alpha;
+        var ky = 1.2 * e.alpha;
         force.charge(charge);
         graph.supernodes.forEach(function(d, i) {
             d.x += (d.truex - d.x) * kx;
@@ -634,7 +683,17 @@ $.post('/getGraphJSON', function(graph) {
         });
     });
 
-    for (var i=0; i<10000; i++) { force.tick(); }
+    for (var i=0; i<10000; i++) {
+         force.tick(); 
+    supernode_g
+        .attr("transform", function(d) {
+            if (invert_x_y) {
+                return  "translate(" + d.y + "," + d.truex + ")";
+            } else {
+                return "translate(" + d.truex + "," + d.y + ")";
+            }
+        });
+    }
 
     force.stop();
     link.each(function(d) {
@@ -651,14 +710,24 @@ $.post('/getGraphJSON', function(graph) {
         d.y1 = yStart + d.source.radius * Math.sin(theta);
         d.y2 = yEnd - d.target.radius * Math.sin(theta);
     });
-    link.attr("y1", function(d) { return d.x1; })
-        .attr("x1", function(d) { return d.y1; })
-        .attr("y2", function(d) { return d.x2; })
-        .attr("x2", function(d) { return d.y2; });
+    if (invert_x_y) {
+        link.attr("y1", function(d) { return d.x1; })
+            .attr("x1", function(d) { return d.y1; })
+            .attr("y2", function(d) { return d.x2; })
+            .attr("x2", function(d) { return d.y2; });
+    } else {
+        link.attr("x1", function(d) { return d.x1; })
+            .attr("y1", function(d) { return d.y1; })
+            .attr("x2", function(d) { return d.x2; })
+            .attr("y2", function(d) { return d.y2; });
+    }
     supernode_g
         .attr("transform", function(d) {
-            //return "translate(" + d.truex + "," + d.y + ")";
-            return "translate(" + d.y + "," + d.truex + ")";
+            if (invert_x_y) {
+                return  "translate(" + d.y + "," + d.truex + ")";
+            } else {
+                return "translate(" + d.truex + "," + d.y + ")";
+            }
         });
 
 
@@ -747,5 +816,5 @@ $.post('/getGraphJSON', function(graph) {
         .style('height', legendHeight);
     legend.attr('transform', 'translate(' + (LEGEND_PAD-fullLegendBox.x) + ',' + (LEGEND_PAD-fullLegendBox.y) + ')');
     moveSubnodesToSupernodes();
-    //pollNodeStatuses(); // keep polling forever
+    pollNodeStatuses(0); // keep polling forever
 });

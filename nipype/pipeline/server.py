@@ -88,7 +88,6 @@ class WorkflowServer(object):
         """
         self.workflow = workflow
         # TODO display workflow in a hierarchy here: use nested workflows, etc
-        #graph = workflow._graph
         graph = workflow._create_flat_graph()
         # _create_flat_graph expands sub-workflows, but not iterables.
         # generate_expanded_graph goes all the way down to iterable expansion
@@ -179,8 +178,10 @@ class WorkflowServer(object):
             # <workflow name>/...
             out_dir = enode.output_dir()
             if not out_dir.startswith(workflow.base_dir):
-                out_dir = op.join(workflow.base_dir,
-                                  enode.output_dir().split(os.path.sep, 3)[-1])
+                (tmpd, _, subd) = enode.output_dir().partition(workflow.name)
+                out_dir =os.path.join(workflow.base_dir, workflow.name + subd)
+                # out_dir = op.join(workflow.base_dir,
+                #                   enode.output_dir().split(os.path.sep, 3)[-1])
             report_file = op.join(out_dir, '_report', 'report.rst')
             result_file = op.join(out_dir, "result_%s.pklz" % enode.name)
             klass = get_clean_class_name(enode)
@@ -206,40 +207,20 @@ class WorkflowServer(object):
         for enode in self.expanded_nodes:
             self.nodes_by_id[enode._id] = enode
 
-        json_string = json.dumps(json_dict, indent=4)
+        json_string = json.dumps(self.convert_to_old_naming(json_dict), indent=4)
         json_string = json_string.replace('unode', 'supernode').replace('enode', 'subnode')
         with open('/tmp/pipe.json', 'w') as f:
             f.write(json_string)
-
 
     def convert_to_old_naming(self, json_dict):
         str = json.dumps(json_dict).replace('unode', 'supernode').replace('enode', 'subnode')
         return json.loads(str)
     @cherrypy.expose
     def index(self, **kwargs):
-        index="""
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
-    <title>Pipeline visualization</title>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
-    <script src="http://d3js.org/d3.v3.min.js"></script>
-    <script src="static/pipeviz.js"></script>
-
-    <script src="static/jquery-ui-1.10.4.custom.min.js"></script>
-    <link type="text/css" rel="stylesheet" href="static/style.css">
-    <link type="text/css" rel="stylesheet" href="static/jquery-ui-1.10.4.custom.min.css">
-    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
-    </style>
-  </head>
-  <body>
-  <div class="canvas"></div>
-  <div class="legend-container"></div>
-  </body>
-</html>
-        """
-        return index
+        index = op.join(self.workflow.base_dir, 'server_content', 'viz', 'index.html')
+        with open(index) as f:
+            as_string = f.read()
+        return as_string
 
     @cherrypy.expose
     def getGraphJSON(self):
@@ -247,14 +228,24 @@ class WorkflowServer(object):
         return json.dumps(self.convert_to_old_naming(self.json_dict))
 
     @cherrypy.expose
-    def nodeStatuses(self):
-        time.sleep(10)
+    def nodeStatuses(self, timeout):
+        time.sleep(int(timeout))
+
         statuses = []
-        for node in self.expanded_nodes:
-            if node.result.runtime.returncode == 0:
-                statuses.append(1)
-            else:
+        for enode in self.json_dict['enodes']:
+            try:
+                result = loadpkl(enode['result'])
+                retcode = result.runtime.returncode
+                # TODO be more specific with exceptions
+            except:
                 statuses.append(-1)
+                continue
+            if retcode == 0:
+                statuses.append(1)
+            elif type(retcode) != int:
+                statuses.append(0)
+            else:
+                statuses.append(-1);
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return json.dumps(self.convert_to_old_naming(statuses))
 
@@ -265,8 +256,6 @@ class WorkflowServer(object):
         out = []
         stuff_to_show = ['stdout', 'stderr', 'cmdline', 'returncode']
         runtime = result.runtime
-        if True:
-            pass
         for thing in stuff_to_show:
             try:
                 value = runtime.__getattribute__(thing)
@@ -280,7 +269,6 @@ class WorkflowServer(object):
             if type(output) is str:
                 out.append({'name': outname, 'value': output, 'type': 'file'})
         cherrypy.response.headers['Content-Type'] = 'application/json'
-        print(out)
         return json.dumps(out)
 
     @cherrypy.expose

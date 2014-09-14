@@ -30,8 +30,8 @@ iframe {
     left: 0; right: 0;
 }
 .popup {
-    background-color: #3a1;
-    overflow: hidden;
+    background-color: #333;
+    overflow: visible;
     margin: auto;
     position: absolute !important;
     top: 0;
@@ -67,7 +67,7 @@ text {
 text.foreground {
   stroke: #111;
   stroke-opacity: 1;
-  stroke-width: 0.25px;
+  stroke-width: 0.75px;
 }
 text.shadow {
   stroke: #fff;
