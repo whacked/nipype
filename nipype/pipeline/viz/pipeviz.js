@@ -7,7 +7,7 @@ $.post('/getGraphJSON', function(graph) {
 
 
     _graph = graph;
-    invert_x_y = true;
+    invert_x_y = false;
 
     // var IN_PROGRESS_COLOR = '#111111';
     // var FAILURE_COLOR = '#ff0000';
@@ -31,13 +31,14 @@ $.post('/getGraphJSON', function(graph) {
     var IFRAME_HEIGHT = 400;
     var IFRAME_WIDTH = 600;
     var TEXT_OFFSET = 23;
+    var TEXT_ANGLE = 20;
     var LEGEND_ITEM_HEIGHT; // set below after sizer()
     var LEGEND_PAD = 6;
 
     var NODESIZE = 12;
     var BORDER = .03;
 
-    var h = 900*.75 * 1.09,
+    var h = 1100*.75 * 1.09,
         w = 1260*.75;
     // var w = 1200,
     //     h = 1720;
@@ -197,8 +198,7 @@ $.post('/getGraphJSON', function(graph) {
         } else {
             yscale = d3.scale.linear()
                 .domain([0, stageSize-1])
-                //.range([0, (1-border)*h]);
-                .range([BORDER*12*h, (1-BORDER*12)*h]);
+                .range([BORDER*8*h, (1-BORDER*8)*h]);
         }
 
         for (var jjj=0; jjj<stageSize; jjj++) {
@@ -207,7 +207,7 @@ $.post('/getGraphJSON', function(graph) {
             if (true) {
                 stageOffset = 0;
             } else {
-                stageOffset = (((jjj/(stageSize-1))-.5) * (xgap*.75));
+                stageOffset = ((jjj/(stageSize-1))-.5) * (xgap*.75);
             }
             s = supernodesInStage[jjj];
         //supernodesInStage.forEach(function(s) {
@@ -318,11 +318,17 @@ $.post('/getGraphJSON', function(graph) {
           .attr("id", function(d) { return d.id; })
           .style("fill", function(d) { return color(d.klass); });
 
+    // *********** TODO TODO TODO TODO *************
+    // TODO ANGLE TEXT SO THAT L/R works!!!!!!!
+    // *********** TODO TODO TODO TODO *************
     // Initialize text: container <g>, "shadow"/embossing, and foreground
     subnode_text = subnode_g
         .append("svg:g")
         .attr("class", "text-container")
-        .attr("transform", "translate(" + TEXT_OFFSET + ",0)");
+        .attr("transform", "" +
+                "translate(" + (invert_x_y ? TEXT_OFFSET : 0) + "," +
+                               (invert_x_y ? 0 : TEXT_OFFSET) + ")" +
+                "rotate(" + TEXT_ANGLE * 1.5 + ")");
 
 
     subnode_text_shadow = subnode_text.append("svg:text")
@@ -366,7 +372,8 @@ $.post('/getGraphJSON', function(graph) {
             if (d.stage % 2 === 1) {
                 vert_offset = -vert_offset;
             }
-            return "translate(-" + TEXT_OFFSET + "," + vert_offset + ")";
+            return "translate(-" + TEXT_OFFSET + "," + vert_offset + ")" +
+                "rotate(" + TEXT_ANGLE + ")";
         });
 
     supernode_text_shadow = supernode_text.append("svg:text")
