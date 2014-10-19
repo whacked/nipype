@@ -159,6 +159,91 @@ $.post('/getGraphJSON', function(graph) {// graphDraw);
         return out;
     };
 
+    ///////////////////////////////
+    // File type viewer dispatch //
+    ///////////////////////////////
+
+    /**
+     * FileTypeDispatcher.render(item) is called when the node item
+     * in the graph has `type` === 'file' below in the subnode_circle
+     * "click" handler.
+     * Currently, we check for the `shape` attribute,
+     * which is outputted by nibabel.load(volume).shape
+     * and corresponds ot the dimensions of the volume.
+     * We render with Papaya only if dim == 4 (has a time component),
+     * else use Slice:Drop (default)
+     */
+    FileTypeDispatcher = {
+          render: function(d_item) {
+            if(d_item.shape.length && d_item.shape.length == 4) {
+              this.papaya(d_item);
+            } else {
+              this.slicedrop(d_item)
+            }
+        }
+        , make_popup: function() {
+            var popupdiv = d3.select('.canvas').append('div')
+                .attr('class', 'popup')
+                .style('width', IFRAME_WIDTH + 'px')
+                .style('height', IFRAME_HEIGHT + 'px')
+                .style('opacity', .96)
+                .on("mouseover", function(d) {
+                    d3.select(this).style('cursor', 'move');
+                })
+                .on("mouseout", function(d) {
+                    d3.select(this).style('cursor', 'default');
+                });
+            $('.popup').draggable().resizable();
+            return popupdiv;
+        }
+        , make_iframe: function(url, onload) {
+            var popupdiv = this.make_popup();
+            var sdFrame = popupdiv.append('iframe')
+                .attr('id', 'vizFrame')
+                .attr('width', '86%')
+                .style('height', '88%')
+                .style('margin', 'auto')
+                .style('margin-top', '5%')
+                .style('opacity', 1)
+                .attr('src', url);
+            if(onload) {
+                sdFrame.attr('onload', onload);
+            }
+            var sdFrameClose = popupdiv.append('img')
+                .attr('id', 'sliceDropClose')
+                .attr('src', 'static/closebutton.png')
+                .style('margin', 'auto')
+                .style('position', 'absolute')
+                .style('left', '-21px') // half its size
+                .style('top', '-21px')
+                // .style('left', IFRAME_WIDTH +'px')
+                // .style('top', IFRAME_HEIGHT + 'px')
+                .on("mouseover", function(d) {
+                    d3.select(this).style('cursor', 'pointer');
+                })
+                .on("mouseout", function(d) {
+                    d3.select(this).style('cursor', 'default');
+                })
+                .on("click", function(d) {
+                    d3.select(this.parentNode).remove();
+                });
+            return sdFrame;
+        }
+        // actual renderer here
+        , slicedrop: function(d_item) {
+            // create a slicedrop iframe
+            // TODO use jquery ui Dialog here instead
+            var filename = d_item.value;
+            console.log("Displaying file:\n" + filename);
+            this.make_iframe('http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename);
+        }
+        , papaya: function(d_item) {
+            d_item.value = "/tmp/data/nipype_simple_2014_06_04/volume.nii.gz";
+            // create a papaya iframe
+            this.make_iframe(server + '/Papaya/Viewer/?filename=' + server + '/retrieveFile?filename=' + d_item.value);
+        }
+    };
+
     ///////////
     // Setup //
     ///////////
@@ -617,51 +702,7 @@ $.post('/getGraphJSON', function(graph) {// graphDraw);
                                     window.alert(d_item.value + "\n\n(Also printed to console)");
                                     console.log(d_item.value);
                                 } else if (d_item.type === 'file') {
-                                    // create a slicedrop iframe
-                                    // TODO use jquery ui Dialog here instead
-                                    var filename = d_item.value;
-                                    var url = 'http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename;
-                                    console.log("Displaying file:\n" + filename);
-                                    var popupdiv = d3.select('.canvas').append('div')
-                                        .attr('class', 'popup')
-                                        .style('width', IFRAME_WIDTH + 'px')
-                                        .style('height', IFRAME_HEIGHT + 'px')
-                                        .style('opacity', .96)
-                                        .on("mouseover", function(d) {
-                                            d3.select(this).style('cursor', 'move');
-                                        })
-                                        .on("mouseout", function(d) {
-                                            d3.select(this).style('cursor', 'default');
-                                        });
-                                    $('.popup').draggable().resizable();
-
-
-                                    var sdFrame = popupdiv.append('iframe')
-                                        .attr('id', 'vizFrame')
-                                        .attr('width', '86%')
-                                        .style('height', '85%')
-                                        .style('margin', 'auto')
-                                        .style('margin-top', '3%')
-                                        .style('opacity', 1)
-                                        .attr('src', url);
-                                    var sdFrameClose = popupdiv.append('img')
-                                        .attr('id', 'sliceDropClose')
-                                        .attr('src', 'static/closebutton.png')
-                                        .style('margin', 'auto')
-                                        .style('position', 'absolute')
-                                        .style('left', '-21px') // half its size
-                                        .style('top', '-21px')
-                                        // .style('left', IFRAME_WIDTH +'px')
-                                        // .style('top', IFRAME_HEIGHT + 'px')
-                                        .on("mouseover", function(d) {
-                                            d3.select(this).style('cursor', 'pointer');
-                                        })
-                                        .on("mouseout", function(d) {
-                                            d3.select(this).style('cursor', 'default');
-                                        })
-                                        .on("click", function(d) {
-                                            d3.select(this.parentNode).remove();
-                                        });
+                                    FileTypeDispatcher.render(d_item);
                                 }
                             });
                 var _menuSize = _menu[0][0].offsetWidth;
