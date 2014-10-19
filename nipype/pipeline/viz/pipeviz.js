@@ -24,7 +24,7 @@ $.post('/getGraphJSON', function(graph) {// graphDraw);
     var MOUSEOVER_TRANSITION_TIME = 100;
     var EXPAND_TRANSITION_TIME = 300;
     var SMALL_ICON_SIZE = 21;
-    var IFRAME_HEIGHT = 400;
+    var IFRAME_HEIGHT = 450;
     var IFRAME_WIDTH = 700;
     var TEXT_OFFSET = 23;
     var TEXT_ANGLE_SUPERNODE = 10;
