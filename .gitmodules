@@ -1,0 +1,3 @@
+[submodule "nipype/external/Papaya"]
+	path = nipype/external/Papaya
+	url = https://github.com/myessail/Papaya
