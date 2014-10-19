@@ -271,7 +271,9 @@ class WorkflowServer(object):
                             if len(nb.load(value).shape) < 4:
                                 out.append({'name': outname, 'value': value, 'type': 'file'})
                         except Exception, e:
+                        except Exception as e:
                             # TODO more careful exception handling
+                            print('EXCEPTION: %s' % e)
                             out.append({'name': outname, 'value': value, 'type': 'text'})
                     else:
                         out.append({'name': outname, 'value': value, 'type': 'string'})
