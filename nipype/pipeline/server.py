@@ -18,11 +18,12 @@ import time
 
 import networkx as nx
 import cherrypy
+import nibabel as nb
 
 from .utils import generate_expanded_graph
 from .utils import isdefined, Bunch
 
-from ..utils.filemanip import loadpkl
+from ..utils.filemanip import loadpkl, filename_to_list
 
 this_file_location = os.path.dirname(__file__)
 
