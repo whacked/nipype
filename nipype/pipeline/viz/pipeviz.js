@@ -3,22 +3,18 @@
 // TODO mousing through menu shouldn't dim the corresponding node
 server = document.URL.split('/', 3).join('/');
 
-$.post('/getGraphJSON', function(graph) {
+$.post('/getGraphJSON', function(graph) {// graphDraw);
 
+//function graphDraw(graph) {
 
     _graph = graph;
     invert_x_y = false;
 
-    // var IN_PROGRESS_COLOR = '#111111';
-    // var FAILURE_COLOR = '#ff0000';
-    // var COMPLETED_COLOR = '#00ff00';
-    // var IN_PROGRESS_COLOR = '#1f77b4';
-    // var FAILURE_COLOR = '#d62728';
-    // var COMPLETED_COLOR = '#2ca02c';
     var IN_PROGRESS_COLOR = '#aaaaaa';
     var FAILURE_COLOR = '#ff9896';
     var COMPLETED_COLOR = '#98df8a';
-    // constants
+
+    // UI constants
     var DIM_OPACITY = .2;
     var NEIGHBOR_OPACITY = .7;
     var SELECTED_OPACITY = .9;
@@ -29,19 +25,18 @@ $.post('/getGraphJSON', function(graph) {
     var EXPAND_TRANSITION_TIME = 300;
     var SMALL_ICON_SIZE = 21;
     var IFRAME_HEIGHT = 400;
-    var IFRAME_WIDTH = 600;
+    var IFRAME_WIDTH = 700;
     var TEXT_OFFSET = 23;
-    var TEXT_ANGLE = 20;
+    var TEXT_ANGLE_SUPERNODE = 10;
+    var TEXT_ANGLE_SUBNODE = 30;
     var LEGEND_ITEM_HEIGHT; // set below after sizer()
     var LEGEND_PAD = 6;
 
     var NODESIZE = 12;
     var BORDER = .03;
 
-    var h = 1100*.75 * 1.09,
-        w = 1260*.75;
-    // var w = 1200,
-    //     h = 1720;
+    var h = 900,
+        w = 945;
     if (invert_x_y) {
         var tmp = h;
         h = w;
@@ -318,9 +313,6 @@ $.post('/getGraphJSON', function(graph) {
           .attr("id", function(d) { return d.id; })
           .style("fill", function(d) { return color(d.klass); });
 
-    // *********** TODO TODO TODO TODO *************
-    // TODO ANGLE TEXT SO THAT L/R works!!!!!!!
-    // *********** TODO TODO TODO TODO *************
     // Initialize text: container <g>, "shadow"/embossing, and foreground
     subnode_text = subnode_g
         .append("svg:g")
@@ -328,7 +320,7 @@ $.post('/getGraphJSON', function(graph) {
         .attr("transform", "" +
                 "translate(" + (invert_x_y ? TEXT_OFFSET : 0) + "," +
                                (invert_x_y ? 0 : TEXT_OFFSET) + ")" +
-                "rotate(" + TEXT_ANGLE * 1.5 + ")");
+                "rotate(" + TEXT_ANGLE_SUBNODE + ")");
 
 
     subnode_text_shadow = subnode_text.append("svg:text")
@@ -373,7 +365,7 @@ $.post('/getGraphJSON', function(graph) {
                 vert_offset = -vert_offset;
             }
             return "translate(-" + TEXT_OFFSET + "," + vert_offset + ")" +
-                "rotate(" + TEXT_ANGLE + ")";
+                "rotate(" + TEXT_ANGLE_SUPERNODE + ")";
         });
 
     supernode_text_shadow = supernode_text.append("svg:text")
@@ -413,6 +405,28 @@ $.post('/getGraphJSON', function(graph) {
                 });
         });
     };
+
+    //function showSingleSubnode(iterableName) {
+    //var showSingleSubnode = function(iterableName) {
+    showSingleSubnode = function(iterableName) {
+        supernode_g
+            .attr("visibility", "hidden")
+            .each(function(d_super, i) {
+                d3.selectAll(d_super.subnode_elements)
+                    .filter(function(d_sub, i) {
+                        console.log(d_sub.descr);
+                        console.log(iterableName);
+                        return d_sub.descr === "_" + iterableName;
+                    })
+                    .style("opacity", 1)
+                    .style("pointer-events", "all")
+                    .each(function(d_sub) {
+                        unhide(d_sub);
+                        d_sub.descr = d_super.descr + " (" + d_sub.descr + ")";
+                    });
+            });
+    };
+
 
     // Set up singleton supernodes to be their child nodes
     singleton = supernode_g.filter(function(d, i) {
@@ -546,22 +560,22 @@ $.post('/getGraphJSON', function(graph) {
     });
 
     subnode_circle
-        .on("click", function(d_node, i_node) {
-            if (d_node.menu && !(d_node.menu === undefined)) {
-                d_node.menu.remove();
-                d_node.menu = false;
+        .on("click", function(d_subnode, i_subnode) {
+            if (d_subnode.menu && !(d_subnode.menu === undefined)) {
+                d_subnode.menu.remove();
+                d_subnode.menu = false;
             } else {
                 var circle = this;
                 var color = d3.rgb(d3.select(circle).style('fill'));
                 var loc = d3.transform(d3.select(circle.parentNode).attr("transform")).translate
                 // TODO dim all other nodes
-                $.post('/getOutputInfo', {"index": i_node}, function(result) {
+                $.post('/getOutputInfo', {"index": i_subnode}, function(result) {
                     var _menu = d3.select(".canvas").append('ul')
-                            .attr('nodeindex', i_node)
+                            .attr('nodeindex', i_subnode)
                             .attr('class', 'textmenu')
                             .style("left", (loc[0]+25) + "px")
                             .style("top", (loc[1]+20) + "px");
-                    d_node.menu = _menu;
+                    d_subnode.menu = _menu;
                     // TODO try using jquery ui menu
                     var _menuItems = _menu.selectAll('li')
                             .data(result)
@@ -600,12 +614,14 @@ $.post('/getGraphJSON', function(graph) {
                             .on("click", function(d_item) {
                                 if (d_item.type === 'string') {
                                     // TODO make a text box here instead of alert
-                                    window.alert(d_item.value);
+                                    window.alert(d_item.value + "\n\n(Also printed to console)");
+                                    console.log(d_item.value);
                                 } else if (d_item.type === 'file') {
                                     // create a slicedrop iframe
                                     // TODO use jquery ui Dialog here instead
                                     var filename = d_item.value;
                                     var url = 'http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename;
+                                    console.log("Displaying file:\n" + filename);
                                     var popupdiv = d3.select('.canvas').append('div')
                                         .attr('class', 'popup')
                                         .style('width', IFRAME_WIDTH + 'px')
@@ -661,7 +677,7 @@ $.post('/getGraphJSON', function(graph) {
                         d3.select(this).style('cursor', 'default');
                     })
                     .on("click", function(d) {
-                        d3.select('.textmenu[nodeindex="'+i_node+'"]').remove();
+                        d3.select('.textmenu[nodeindex="'+i_subnode+'"]').remove();
                         d3.select(this).remove();
                     });
                 });

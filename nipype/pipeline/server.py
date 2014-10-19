@@ -20,6 +20,7 @@ import networkx as nx
 import cherrypy
 
 from .utils import generate_expanded_graph
+from .utils import isdefined, Bunch
 
 from ..utils.filemanip import loadpkl
 
@@ -88,6 +89,7 @@ class WorkflowServer(object):
         """
         self.workflow = workflow
         # TODO display workflow in a hierarchy here: use nested workflows, etc
+        #workflow._generate_json()
         graph = workflow._create_flat_graph()
         # _create_flat_graph expands sub-workflows, but not iterables.
         # generate_expanded_graph goes all the way down to iterable expansion
@@ -252,22 +254,26 @@ class WorkflowServer(object):
     @cherrypy.expose
     def getOutputInfo(self, index):
         index = int(index)
+        print(self.json_dict['enodes'][index]['result'])
         result = loadpkl(self.json_dict['enodes'][index]['result'])
         out = []
-        stuff_to_show = ['stdout', 'stderr', 'cmdline', 'returncode']
-        runtime = result.runtime
-        for thing in stuff_to_show:
-            try:
-                value = runtime.__getattribute__(thing)
-                json.dumps(value)
-                out.append({'name': thing, 'value': value, 'type': 'string'})
-            except (AttributeError, ValueError):
-                pass
-
         # TODO find a better way to get the outputs here
-        for (outname, output) in result.outputs.get().items():
-            if type(output) is str:
-                out.append({'name': outname, 'value': output, 'type': 'file'})
+        if isinstance(result.outputs, Bunch):
+            items = result.outputs.items()
+        else:
+            items = result.outputs.get().items()
+        for (outname, output) in items:
+            if isdefined(output):
+                for value in filename_to_list(output):
+                    if os.path.exists(value):
+                        try:
+                            if len(nb.load(value).shape) < 4:
+                                out.append({'name': outname, 'value': value, 'type': 'file'})
+                        except Exception, e:
+                            # TODO more careful exception handling
+                            out.append({'name': outname, 'value': value, 'type': 'text'})
+                    else:
+                        out.append({'name': outname, 'value': value, 'type': 'string'})
         cherrypy.response.headers['Content-Type'] = 'application/json'
         return json.dumps(out)
 
