@@ -67,10 +67,30 @@ def serve_content(workflow=None):
                 'tools.staticdir.on' : True,
                 'tools.staticdir.dir' : os.path.join(content_dir, 'viz'),
                 'tools.staticdir.debug': True,
+            },
+            '/Papaya': {
+                'tools.staticdir.on' : True,
+                'tools.staticdir.dir' : os.path.join(os.path.dirname(__file__), '..', 'external/Papaya'),
+                'tools.staticdir.debug': True,
             }
     }
     cherrypy.quickstart(server, config=appconfig)
 
+# CUSTOM VIEW HANDLER for PapayaViewer.
+# this allows exposing of /Papaya/Viewer in conjunction with the
+# /Papaya staticdir declared in appconfig. This is done primarily to
+# simplify transfer of example html supplied in Papaya/tests/ because
+# of its use of relative asset paths.
+# This view is activated later in `self.Papaya = PapayaViewer()`
+class PapayaViewer:
+    @cherrypy.expose()
+    def Viewer(self, filename):
+        viewer_html = os.path.join(os.path.dirname(__file__), '..',
+                                   'external/PapayaViewer.html')
+        with open(viewer_html) as f:
+            as_string = f.read()
+        return as_string
+    
 class WorkflowServer(object):
     """
     Server that displays the result of a workflow
@@ -214,6 +234,8 @@ class WorkflowServer(object):
         json_string = json_string.replace('unode', 'supernode').replace('enode', 'subnode')
         with open('/tmp/pipe.json', 'w') as f:
             f.write(json_string)
+
+        self.Papaya = PapayaViewer()
 
     def convert_to_old_naming(self, json_dict):
         str = json.dumps(json_dict).replace('unode', 'supernode').replace('enode', 'subnode')
