@@ -290,9 +290,8 @@ class WorkflowServer(object):
                 for value in filename_to_list(output):
                     if os.path.exists(value):
                         try:
-                            if len(nb.load(value).shape) < 4:
-                                out.append({'name': outname, 'value': value, 'type': 'file'})
-                        except Exception, e:
+                            out.append({'name': outname, 'value': value, 'type': 'file',
+                                        'shape': nb.load(value).shape})
                         except Exception as e:
                             # TODO more careful exception handling
                             print('EXCEPTION: %s' % e)
