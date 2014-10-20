@@ -169,16 +169,16 @@ $.post('/getGraphJSON', function(graph) {// graphDraw);
      * "click" handler.
      * Currently, we check for the `shape` attribute,
      * which is outputted by nibabel.load(volume).shape
-     * and corresponds ot the dimensions of the volume.
+     * and corresponds to the dimensions of the volume.
      * We render with Papaya only if dim == 4 (has a time component),
      * else use Slice:Drop (default)
      */
     FileTypeDispatcher = {
           render: function(d_item) {
             if(d_item.shape.length && d_item.shape.length == 4) {
-              this.papaya(d_item);
+                this.papaya(d_item);
             } else {
-              this.slicedrop(d_item)
+                this.slicedrop(d_item);
             }
         }
         , make_popup: function() {
@@ -238,7 +238,6 @@ $.post('/getGraphJSON', function(graph) {// graphDraw);
             this.make_iframe('http://slicedrop.com/?' + server + '/retrieveFile?filename=' + filename);
         }
         , papaya: function(d_item) {
-            d_item.value = "/tmp/data/nipype_simple_2014_06_04/volume.nii.gz";
             // create a papaya iframe
             this.make_iframe(server + '/Papaya/Viewer/?filename=' + server + '/retrieveFile?filename=' + d_item.value);
         }
